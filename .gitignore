@@ -10,3 +10,6 @@ temp_deps/
 .pytest_cache/
 projconf.toml
 *.png
+
+# Мусор
+*.ppdb

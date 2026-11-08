@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+*.bak
+build/
+build_xppb/
+temp_deps/
+.venv/
+*.egg-info/
+.pytest_cache/
+projconf.toml
+*.png

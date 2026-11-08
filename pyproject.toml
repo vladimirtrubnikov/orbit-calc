@@ -1,0 +1,27 @@
+[project]
+name = "orbit-calc"
+version = "0.3.0"
+description = "Универсальный калькулятор орбитальных и астрономических расчётов"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = ["matplotlib>=3.5"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+gui = ["PySide6>=6.5"]
+
+[project.scripts]
+orbit-calc = "cli.calculator:main"
+orbit-launcher = "launcher:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["core", "cli", "gui"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"

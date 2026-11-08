@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+#Author: vladnet
+#launch_gui.bat.exe
+#Rating=1-5
+export PW_WINE_USE="PROTON_LG"
+export PW_PREFIX_NAME="DEFAULT"
+export FILE_SHA256SUM="ad751c00d6b3cd48015b44212de720e5811b61ce7d820708b0957391d14b540d"

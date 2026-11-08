@@ -21,6 +21,10 @@ from .input_form import InputForm
 from .result_view import ResultView
 from .runner import RunResult, run_case
 from .theme import apply_theme
+from .constants_dialog import ConstantsDialog
+from .cheatsheet_dialog import CheatsheetDialog
+from .sweep_tab import SweepTab
+from .diff_dialog import DiffDialog
 
 
 class MainWindow(QMainWindow):
@@ -30,6 +34,7 @@ class MainWindow(QMainWindow):
         self.resize(1400, 880)
 
         self._current_sid: str | None = None
+        self._baseline_result = None   # для A/B сравнения
         self._current_result: RunResult | None = None
         self._debounce = QTimer(self)
         self._debounce.setSingleShot(True)
@@ -73,6 +78,8 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.json_view, "JSON")
         self.latex_view = ResultView()
         self.tabs.addTab(self.latex_view, "LaTeX")
+        self.sweep_tab = SweepTab()
+        self.tabs.addTab(self.sweep_tab, "📊 Sweep")
         cv.addWidget(self.tabs, 1)
         splitter.addWidget(center)
 
@@ -119,6 +126,29 @@ class MainWindow(QMainWindow):
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         tb.addWidget(spacer)
+
+        const_btn = QPushButton("📚 Константы")
+        const_btn.setToolTip("Справочник всех констант")
+        const_btn.clicked.connect(self._open_constants)
+        tb.addWidget(const_btn)
+
+        formula_btn = QPushButton("📐 Формулы")
+        formula_btn.setToolTip("Все LaTeX-формулы проекта")
+        formula_btn.clicked.connect(self._open_cheatsheet)
+        tb.addWidget(formula_btn)
+
+        self.baseline_btn = QPushButton("📌 В A")
+        self.baseline_btn.setToolTip("Запомнить текущий расчёт как A")
+        self.baseline_btn.clicked.connect(self._on_set_baseline)
+        tb.addWidget(self.baseline_btn)
+
+        self.diff_btn = QPushButton("📊 Сравнить")
+        self.diff_btn.setToolTip("Сравнить с сохранённым A")
+        self.diff_btn.clicked.connect(self._on_diff)
+        self.diff_btn.setEnabled(False)
+        tb.addWidget(self.diff_btn)
+
+        tb.addSeparator()
 
         export_btn = QPushButton("📋 Экспорт")
         export_btn.setObjectName("primary")
@@ -246,6 +276,31 @@ class MainWindow(QMainWindow):
     def _export_tex(self, path: str, res: RunResult) -> None:
         body = "\n".join(f"\\[ {f} \\]" for f in res.latex)
         Path(path).write_text(body, encoding="utf-8")
+
+    def _open_constants(self) -> None:
+        ConstantsDialog(self).exec()
+
+    def _open_cheatsheet(self) -> None:
+        CheatsheetDialog(self).exec()
+
+    def _on_set_baseline(self) -> None:
+        if self._current_result is None:
+            self.status.showMessage("Сначала выполните расчёт")
+            return
+        self._baseline_result = self._current_result
+        self.diff_btn.setEnabled(True)
+        self.status.showMessage(
+            f"📌 A зафиксирован: case {self._current_result.sid}"
+        )
+
+    def _on_diff(self) -> None:
+        if self._baseline_result is None:
+            self.status.showMessage("Нет сохранённого A — нажмите «📌 В A»")
+            return
+        if self._current_result is None:
+            self.status.showMessage("Сначала выполните расчёт для B")
+            return
+        DiffDialog(self._baseline_result, self._current_result, self).exec()
 
     def closeEvent(self, event) -> None:
         self._debounce.stop()

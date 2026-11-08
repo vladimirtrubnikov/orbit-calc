@@ -2116,6 +2116,26 @@ def _dispatch_solve(sid: str) -> None:
     _verify_against_core(sid)
 
 
+def _ask_repeat() -> bool:
+    """Спросить у пользователя после расчёта.
+
+    Returns:
+        True  — повторить расчёт с новыми данными
+        False — вернуться в меню
+    """
+    while True:
+        try:
+            ans = input("\n  0 — назад в меню, 1 — новый расчёт: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return False
+        if ans in ("0", ""):
+            return False
+        if ans == "1":
+            return True
+        print("  Введите 0 или 1")
+
+
 def calc_solve() -> None:
     while True:
         print(f"\n{'=' * 50}")
@@ -2187,7 +2207,16 @@ def calc_solve() -> None:
             if ch == "0":
                 break
             elif ch in _DISPATCH:
-                _dispatch_solve(ch)
+                while True:
+                    try:
+                        _dispatch_solve(ch)
+                    except (ValueError, ZeroDivisionError) as exc:
+                        logger.warning(f"  Ошибка ввода: {exc}")
+                    except KeyboardInterrupt:
+                        print()
+                        break
+                    if not _ask_repeat():
+                        break
             else:
                 print("  Введите 0..46")
         except (ValueError, ZeroDivisionError) as exc:
@@ -2197,6 +2226,20 @@ def calc_solve() -> None:
 # ═══════════════════════════════════════════════════════════════════════════
 #  ОСНОВНОЕ МЕНЮ
 # ═══════════════════════════════════════════════════════════════════════════
+
+
+_MAIN_CALCS = {
+    "1": calc_orbit_params,
+    "2": calc_velocity_point,
+    "3": calc_circular,
+    "4": calc_hohmann,
+    "5": calc_bielliptic,
+    "6": calc_tsiolkovsky,
+    "7": calc_inverse_ts,
+    "8": calc_escape,
+    "9": calc_hohmann_animation,
+    "10": calc_phasing_animation,
+}
 
 
 def interactive_calculator() -> None:
@@ -2220,26 +2263,16 @@ def interactive_calculator() -> None:
         if not HAS_PLOT:
             print("\n  " + _t("menu_no_plot"))
         ch = input("\n" + _t("menu_choice")).strip()
-        if ch == "1":
-            calc_orbit_params()
-        elif ch == "2":
-            calc_velocity_point()
-        elif ch == "3":
-            calc_circular()
-        elif ch == "4":
-            calc_hohmann()
-        elif ch == "5":
-            calc_bielliptic()
-        elif ch == "6":
-            calc_tsiolkovsky()
-        elif ch == "7":
-            calc_inverse_ts()
-        elif ch == "8":
-            calc_escape()
-        elif ch == "9":
-            calc_hohmann_animation()
-        elif ch == "10":
-            calc_phasing_animation()
+        if ch in _MAIN_CALCS:
+            func = _MAIN_CALCS[ch]
+            while True:
+                try:
+                    func()
+                except KeyboardInterrupt:
+                    print()
+                    break
+                if not _ask_repeat():
+                    break
         elif ch == "11":
             new_lang = input("  ru/en: ").strip().lower()
             set_lang(new_lang)

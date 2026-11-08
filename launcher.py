@@ -81,6 +81,12 @@ def check_environment() -> dict:
             "(pip install pytest)"
         )
 
+    try:
+        import PySide6  # noqa: F401
+        results["pyside6"] = True
+    except ImportError:
+        results["pyside6"] = False
+
     if sys.version_info < (3, 10):
         results["warnings"].append(
             f"Python {results['python']} < 3.10 — рекомендуется обновиться"
@@ -96,6 +102,7 @@ def print_status(env: dict) -> None:
     print(f"  tests:       {'tests/' if env['tests'] else _c('нет', 'y')}")
     print(f"  matplotlib:  {_c('✓', 'g') if env['matplotlib'] else _c('нет', 'y')}")
     print(f"  pytest:      {_c('✓', 'g') if env['pytest'] else _c('нет', 'y')}")
+    print(f"  PySide6:     {_c('✓', 'g') if env.get('pyside6') else _c('нет', 'y')}  (GUI)")
     for w in env["warnings"]:
         _warn(w)
 
@@ -137,6 +144,43 @@ def run(args: list[str], capture: bool = False) -> int:
         _err("Python не найден в PATH")
         return 1
 
+
+
+def run_gui(args: list[str] | None = None) -> int:
+    """Запускает PySide6 GUI: python -m gui с PYTHONPATH=ROOT."""
+    if args is None:
+        args = []
+
+    # Проверка PySide6
+    try:
+        import PySide6  # noqa: F401
+    except ImportError:
+        _warn("PySide6 не установлен — GUI не запустится")
+        print(f"  Установите: {_c('pip install PySide6 matplotlib', 'd')}")
+        if _ask_str("Продолжить всё равно? (y/n)", "n").lower() != "y":
+            return 1
+
+    gui_main = ROOT / "gui" / "__main__.py"
+    if not gui_main.is_file():
+        _err(f"Не найден {gui_main}")
+        _err("GUI не установлен в проекте")
+        return 1
+
+    cmd = [sys.executable, "-m", "gui", *args]
+    print(f"\n  {_c('$', 'd')} python -m gui {' '.join(args)}")
+    print()
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(ROOT) + os.pathsep + env.get("PYTHONPATH", "")
+
+    try:
+        return subprocess.call(cmd, cwd=str(ROOT), env=env)
+    except KeyboardInterrupt:
+        print(f"\n  {_c('GUI закрыт', 'd')}")
+        return 0
+    except FileNotFoundError:
+        _err("Python не найден в PATH")
+        return 1
 
 def run_pytest() -> int:
     if not TESTS.is_dir():
@@ -325,6 +369,8 @@ def interactive_menu(env: dict) -> None:
         print("   9. pytest tests/ -v")
         print("  10. Окружение")
         print("  11. Полный --help")
+        print(f"  {_c('GUI', 'b')}")
+        print("  12. Запустить GUI (PySide6)")
         print("   0. Выход")
 
         try:
@@ -361,8 +407,10 @@ def interactive_menu(env: dict) -> None:
             print_status(env)
         elif choice == "11":
             menu_full_help()
+        elif choice == "12":
+            run_gui()
         else:
-            _warn("Введите 0..11")
+            _warn("Введите 0..12")
 
         if choice != "0":
             try:
@@ -391,6 +439,8 @@ def main() -> int:
             return 0
         if args[0] in ("--test", "-t"):
             return run_pytest()
+        if args[0] in ("--gui", "-g"):
+            return run_gui(args[1:])
         return run(args)
 
     # Интерактивный режим
